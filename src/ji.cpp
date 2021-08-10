@@ -115,17 +115,26 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     }
     // 判断是否要要报警并将检测到的目标画到输出图上
     if (validTargets.size() > 0) {
-        // 如果检测到有`狗`就报警
         isNeedAlert = true;
     }
     for (auto &object : validTargets) {
         LOG(INFO) << "Found " << object.name;
         if (config.drawResult) {
             std::stringstream ss;
-            ss << config.targetRectTextMap[config.language];
+            auto objName = config.targetRectTextMap_0[config.language];
+            if(object.name=="grey_brick")
+                objName = config.targetRectTextMap_1[config.language];
+            else if(object.name=="bricks")
+                objName = config.targetRectTextMap_2[config.language];
+            else if(object.name=="mound")
+                objName = config.targetRectTextMap_3[config.language];
+            else
+                objName = config.targetRectTextMap_4[config.language];
+
+            ss << objName;
             if (config.drawConfidence) {
                 ss.precision(2);
-                ss << std::fixed << (config.targetRectTextMap[config.language].empty() ? "" : ": ") << object.prob * 100 << "%";
+                ss << std::fixed << (objName.empty() ? "" : ": ") << object.prob * 100 << "%";
             }
             drawRectAndText(outFrame, object.rect, ss.str(), config.targetRectLineThickness, cv::LINE_AA,
                             cv::Scalar(config.targetRectColor[0], config.targetRectColor[1], config.targetRectColor[2]), config.targetRectColor[3], config.targetTextHeight,
@@ -140,29 +149,41 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
                  cv::Scalar(config.warningTextBg[0], config.warningTextBg[1], config.warningTextBg[2]), config.warningTextLeftTop);
     }
 
-    // 将结果封装成json字符串
+  // 将结果封装成json字符串
     cJSON *rootObj = cJSON_CreateObject();
-    int jsonAlertCode = JSON_ALERT_FLAG_FALSE;
-    if (isNeedAlert) {
-        jsonAlertCode = JSON_ALERT_FLAG_TRUE;
-    }
-    cJSON_AddItemToObject(rootObj, JSON_ALERT_FLAG_KEY, cJSON_CreateNumber(jsonAlertCode));
-    cJSON *dogsObj = cJSON_CreateArray();
-    for (auto &dog : validTargets) {
-        cJSON *odbObj = cJSON_CreateObject();
-        int x = dog.rect.x;
-        int y = dog.rect.y;
-        int width = dog.rect.width;
-        int height = dog.rect.height;
-        cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(x));
-        cJSON_AddItemToObject(odbObj, "y", cJSON_CreateNumber(y));
-        cJSON_AddItemToObject(odbObj, "width", cJSON_CreateNumber(width));
-        cJSON_AddItemToObject(odbObj, "height", cJSON_CreateNumber(height));
-        cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(dog.prob));
+    cJSON *algorithm_data = cJSON_CreateObject();
+    cJSON *model_data = cJSON_CreateObject();
+    cJSON_AddItemToObject(rootObj, "algorithm_data", algorithm_data);
+    cJSON_AddItemToObject(rootObj, "model_data", model_data);
 
-        cJSON_AddItemToArray(dogsObj, odbObj);
+    cJSON_AddItemToObject(algorithm_data, "is_alert", cJSON_CreateBool(isNeedAlert));
+    cJSON_AddItemToObject(algorithm_data, "target_count", cJSON_CreateNumber(validTargets.size()));
+    cJSON *target_info = cJSON_CreateArray();
+    cJSON_AddItemToObject(algorithm_data, "target_info", target_info);
+
+    cJSON *objects = cJSON_CreateArray();
+    cJSON_AddItemToObject(model_data, "objects", objects);
+
+    for (auto &object : detectedObjects) {
+        cJSON *odbObj = cJSON_CreateObject();
+        cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(object.rect.x));
+        cJSON_AddItemToObject(odbObj, "y", cJSON_CreateNumber(object.rect.y));
+        cJSON_AddItemToObject(odbObj, "height", cJSON_CreateNumber(object.rect.height));
+        cJSON_AddItemToObject(odbObj, "width", cJSON_CreateNumber(object.rect.width));
+        cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(object.prob));
+        cJSON_AddItemToObject(odbObj, "name", cJSON_CreateString(object.name.c_str()));
+       
+        cJSON *_odbObj = cJSON_CreateObject();
+        cJSON_AddItemToObject(_odbObj, "x", cJSON_CreateNumber(object.rect.x));
+        cJSON_AddItemToObject(_odbObj, "y", cJSON_CreateNumber(object.rect.y));
+        cJSON_AddItemToObject(_odbObj, "width", cJSON_CreateNumber(object.rect.width));
+        cJSON_AddItemToObject(_odbObj, "height", cJSON_CreateNumber(object.rect.height));
+        cJSON_AddItemToObject(_odbObj, "confidence", cJSON_CreateNumber(object.prob));
+        cJSON_AddItemToObject(_odbObj, "name", cJSON_CreateString(object.name.c_str()));
+
+        cJSON_AddItemToArray(objects, odbObj);
+        cJSON_AddItemToArray(target_info, _odbObj);
     }
-    cJSON_AddItemToObject(rootObj, "dogs", dogsObj);
 
     char *jsonResultStr = cJSON_Print(rootObj);
     int jsonSize = strlen(jsonResultStr);

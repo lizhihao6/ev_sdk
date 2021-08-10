@@ -60,13 +60,14 @@ void free_list_contents(list *l)
 
 void **list_to_array(list *l) 
 { 
-    void **a = calloc(l->size, sizeof(void*)); 
+    void **a = calloc(l->size+1, sizeof(void*)); 
     int count = 0; 
     node *n = l->front; 
     while(n){ 
         a[count++] = n->val; 
         n = n->next; 
     } 
+    a[count++] = NULL;
     return a; 
 } 
 
@@ -85,7 +86,7 @@ list *get_paths(char *filename)
 
 char **get_labels(char *filename){ 
     list *plist = get_paths(filename); 
-    char **labels = (char **)list_to_array(plist); 
+    char **labels = (char **)list_to_array(plist);
     free_list(plist); 
     return labels; 
 } 
