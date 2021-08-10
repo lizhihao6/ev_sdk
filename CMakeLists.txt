@@ -17,17 +17,34 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/cJSON)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rd/wkt_parser)
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:/usr/local/ev_sdk/lib")
 
+# YOLOX PART
+option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
+find_package(CUDA REQUIRED)
+# cuda
+include_directories(/usr/local/cuda-10.2/include)
+link_directories(/usr/local/cuda-10.2/lib64)
+# cudnn
+include_directories(/usr/include)
+link_directories(/usr/lib/x86_64-linux-gnu)
+
+# tensorrt 
+include_directories(/usr/include/x86_64-linux-gnu)
+# link_directories(/usr/local/cuda-10.2/TensorRT/v7.2.1.6/lib) (same as cudnn)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Ofast -Wfatal-errors -D_MWAITXINTRIN_H_INCLUDED")
+
 # 编译libji.so
 list(APPEND libji_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ji.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/SampleDetector.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/SampleDetector.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/yolox.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/list.c)
 add_library (${PROJECT_NAME} SHARED ${libji_SOURCES})
 target_include_directories(${PROJECT_NAME}
         PUBLIC ${OpenCV_INCLUDE_DIR}
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
         PUBLIC ${JI_LICENSE_INCLUDE_DIRS}
-        PUBLIC ${EV_ENCRYPT_MODULE_INCLUDE_DIRS}
-        PUBLIC "/usr/local/ev_sdk/3rd/darknet/include")
+        PUBLIC ${EV_ENCRYPT_MODULE_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME}
         ${OpenCV_LIBS}
         glog
@@ -35,11 +52,14 @@ target_link_libraries(${PROJECT_NAME}
         ${EV_ENCRYPT_MODULE_LDFLAGS}
         cjson
         WKTParser
-        "/usr/local/ev_sdk/3rd/darknet/lib/libdarknet.so"
+        # "/usr/local/ev_sdk/3rd/darknet/lib/libdarknet.so"
+        nvinfer
+        cudart
         )
 
 # 安装SampleDetector所依赖的libdarknet.so, 请在此处将自己依赖的库安装到/usr/local/ev_sdk/lib下
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/darknet/lib/libdarknet.so DESTINATION lib)
+# install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/darknet/lib/libdarknet.so DESTINATION lib)
+install(FILES DESTINATION lib)
 
 
 

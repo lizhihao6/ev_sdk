@@ -29,7 +29,7 @@
 // 如果需要添加授权功能，请保留该宏定义，并在ji_init中实现授权校验
 #define ENABLE_JI_AUTHORIZATION
 // 如果需要加密模型，请保留该宏定义，并在ji_create_predictor中实现模型解密
-#define ENABLE_JI_MODEL_ENCRYPTION
+// #define ENABLE_JI_MODEL_ENCRYPTION
 
 #ifndef EV_SDK_DEBUG
 #define EV_SDK_DEBUG 1
@@ -246,9 +246,7 @@ void *ji_create_predictor(int pdtype) {
     decryptedModelStr[len] = '\0';
 #endif
 
-    int iRet = detector->init("/usr/local/ev_sdk/config/coco.names",
-                              decryptedModelStr,
-                              "/usr/local/ev_sdk/model/model.dat");
+    int iRet = detector->init();
     if (decryptedModelStr != nullptr) {
         free(decryptedModelStr);
     }
