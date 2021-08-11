@@ -52,7 +52,7 @@ class SampleDetector {
     private:
         // network* mNetworkPtr{nullptr};
         YOLOX* yolox  = nullptr;
-        const string yoloxPath = "/usr/local/ev_sdk/model/"; 
+        const string yoloxPath = "/usr/local/ev_sdk/model/model_trt.engine"; 
         char* classNamePath = "/usr/local/ev_sdk/config/coco.names";
 
         char **mLabels = nullptr;
