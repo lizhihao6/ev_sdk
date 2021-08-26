@@ -1,5 +1,11 @@
 # EV_SDK
 
+sh init.sh
+python init.py -n name1 name2
+edit yolox.hpp numclasses
+edit ji.cpp json
+cmake .. && make clean && make install
+
 ## 说明
 ### EV_SDK的目标
 开发者专注于算法开发及优化，最小化业务层编码，即可快速部署到生产环境，共同打造商用级高质量算法。
