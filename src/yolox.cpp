@@ -29,17 +29,17 @@ int YOLOX::init(const std::string engine_file_path){
     context = engine->createExecutionContext();
     assert(context != nullptr);
     delete[] trtModelStream;
+
+    auto out_dims = engine->getBindingDimensions(1);
+    for(int j=0;j<out_dims.nbDims;j++) {
+        output_size *= out_dims.d[j];
+    }
+    prob = new float[output_size];
+
     return 0;
 }
 
 std::vector<YOLOXObject>  YOLOX::forward(const cv::Mat &img){
-    auto out_dims = engine->getBindingDimensions(1);
-    auto output_size = 1;
-    for(int j=0;j<out_dims.nbDims;j++) {
-        output_size *= out_dims.d[j];
-    }
-    static float* prob = new float[output_size];
-
     int img_w = img.cols;
     int img_h = img.rows;
     cv::Mat pr_img = static_resize(img);
@@ -65,6 +65,8 @@ void YOLOX::uninit(){
     context->destroy();
     engine->destroy();
     runtime->destroy();
+    delete[] prob;
+    prob = nullptr;
 }
 
 cv::Mat YOLOX::static_resize(const cv::Mat& img) {

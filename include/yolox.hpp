@@ -64,7 +64,9 @@ class YOLOX {
     private:
         const char* INPUT_BLOB_NAME = "input_0";
         const char* OUTPUT_BLOB_NAME = "output_0";
-        
+        int output_size = 1;
+        float *prob = nullptr;
+
         IRuntime* runtime = nullptr;
         ICudaEngine* engine = nullptr;
         IExecutionContext* context = nullptr;
