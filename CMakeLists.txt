@@ -43,7 +43,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Ofast -Wfatal-errors -
 list(APPEND libji_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ji.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/SampleDetector.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/yolox.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/yolov5.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/calibrator.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/list.c)
 add_library (${PROJECT_NAME} SHARED ${libji_SOURCES})
 target_include_directories(${PROJECT_NAME}
