@@ -5,12 +5,10 @@
 #ifndef JI_SAMPLEDETECTOR_HPP
 #define JI_SAMPLEDETECTOR_HPP
 #include <string>
+#include "Object.hpp"
 #include <opencv2/core/mat.hpp>
-#include "yolox.hpp"
+#include "yolov5.hpp"
 #include "ji_utils.h"
-extern "C"{
-    #include "list.h"
-}
 #define STATUS int
 using namespace std;
 
@@ -20,12 +18,6 @@ using namespace std;
 
 class SampleDetector {
     public:
-        typedef struct {
-            float prob;
-            string name;
-            cv::Rect rect;
-        } Object;
-
         typedef struct {
             double nms;
             double thresh;
@@ -51,15 +43,13 @@ class SampleDetector {
 
     private:
         // network* mNetworkPtr{nullptr};
-        YOLOX* yolox  = nullptr;
-        const string yoloxPath = "/usr/local/ev_sdk/model/model_trt.engine"; 
+        YOLOV5* yolov5  = nullptr;
+        const string yolov5Path = "/usr/local/ev_sdk/model/yolov5s.wrt"; 
         char* classNamePath = "/usr/local/ev_sdk/config/coco.names";
 
-        char **mLabels = nullptr;
         double mThresh = 0.5;
         double mHIERThresh = 0.5;
         double mNms = 0.6;
-        size_t mClasses = 0;
 };
 
 #endif //JI_SAMPLEDETECTOR_HPP

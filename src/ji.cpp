@@ -17,6 +17,7 @@
 #include <ji_utils.h>
 #include "ji.h"
 
+#include "Object.hpp"
 #include "pubKey.hpp"
 #include "model_str.hpp"
 #include "SampleDetector.hpp"
@@ -83,8 +84,8 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char* arg
     detector->setThresh(algoConfig.thresh);
 
     // 针对每个ROI进行算法处理
-    std::vector<SampleDetector::Object> detectedObjects;
-    std::vector<SampleDetector::Object> validTargets;
+    std::vector<Object> detectedObjects;
+    std::vector<Object> validTargets;
 
     // 算法处理
     int processRet = detector->processImage(inFrame, detectedObjects);

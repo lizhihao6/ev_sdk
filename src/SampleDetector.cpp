@@ -17,18 +17,9 @@ SampleDetector::SampleDetector(double thresh, double nms, double hierThresh):
 
 int SampleDetector::init() {
     LOG(INFO) << "Loading model...";
-    mLabels = get_labels(classNamePath);
-    if (mLabels == nullptr) {
-        LOG(ERROR) << "Failed getting labels from `" << classNamePath << "`!";
-        return SampleDetector::ERROR_INVALID_INIT_ARGS;
-    }
-    while (mLabels[mClasses] != nullptr) {
-        mClasses++;
-    }
-    cout << "Num of Classes " << mClasses << endl;
 
-    yolox = new YOLOX();
-    if(yolox->init(yoloxPath)){
+    yolov5 = new YOLOV5();
+    if(yolov5->init(yolov5Path, classNamePath, mThresh)){
         LOG(ERROR) << "Failed loading weights from `" << yoloxPath << "`!";
         return SampleDetector::ERROR_INVALID_YOLOX_PATH;
     }
@@ -38,20 +29,9 @@ int SampleDetector::init() {
 }
 
 void SampleDetector::unInit() {
-    if (mLabels) {
-        for (int i = 0; i < mClasses; ++i) {
-            if (mLabels[i]) {
-                free(mLabels[i]);
-                mLabels[i] = nullptr;
-            }
-        }
-        free(mLabels);
-        mLabels = nullptr;
-    }
-
-    if(yolox){
-        yolox->uninit();
-        yolox = nullptr;
+    if(yolov5){
+        yolov5->uninit();
+        yolov5 = nullptr;
     }
 }
 
@@ -60,13 +40,7 @@ STATUS SampleDetector::processImage(const cv::Mat &cv_image, vector<Object> &res
         LOG(ERROR) << "Invalid input!";
         return ERROR_INVALID_INPUT;
     }
-    vector<YOLOXObject> yoloxObject = yolox->forward(cv_image);
-    for(auto object = yoloxObject.begin(); object != yoloxObject.end(); object++){
-        if(object->prob > mThresh)
-            result.push_back(Object{object->prob, mLabels[object->label], object->rect});
-    }
-
-    // todo: maybe need del yoloxObject
+    yolov5->forward(result);
     return SampleDetector::PROCESS_OK;
 }
 
