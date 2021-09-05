@@ -14,7 +14,7 @@
 #else
 #define API
 #endif
-#endif  // API_EXPORTS
+#endif // API_EXPORTS
 
 #if NV_TENSORRT_MAJOR >= 8
 #define TRT_NOEXCEPT noexcept
@@ -24,4 +24,4 @@
 #define TRT_CONST_ENQUEUE
 #endif
 
-#endif  // __MACROS_H
+#endif // __MACROS_H

@@ -4,16 +4,20 @@
 #include <dirent.h>
 #include <opencv2/opencv.hpp>
 
-static inline cv::Mat preprocess_img(cv::Mat& img, int input_w, int input_h) {
+static inline cv::Mat preprocess_img(cv::Mat &img, int input_w, int input_h)
+{
     int w, h, x, y;
-    float r_w = input_w / (img.cols*1.0);
-    float r_h = input_h / (img.rows*1.0);
-    if (r_h > r_w) {
+    float r_w = input_w / (img.cols * 1.0);
+    float r_h = input_h / (img.rows * 1.0);
+    if (r_h > r_w)
+    {
         w = input_w;
         h = r_w * img.rows;
         x = 0;
         y = (input_h - h) / 2;
-    } else {
+    }
+    else
+    {
         w = r_h * img.cols;
         h = input_h;
         x = (input_w - w) / 2;
@@ -26,16 +30,20 @@ static inline cv::Mat preprocess_img(cv::Mat& img, int input_w, int input_h) {
     return out;
 }
 
-static inline int read_files_in_dir(const char *p_dir_name, std::vector<std::string> &file_names) {
+static inline int read_files_in_dir(const char *p_dir_name, std::vector<std::string> &file_names)
+{
     DIR *p_dir = opendir(p_dir_name);
-    if (p_dir == nullptr) {
+    if (p_dir == nullptr)
+    {
         return -1;
     }
 
-    struct dirent* p_file = nullptr;
-    while ((p_file = readdir(p_dir)) != nullptr) {
+    struct dirent *p_file = nullptr;
+    while ((p_file = readdir(p_dir)) != nullptr)
+    {
         if (strcmp(p_file->d_name, ".") != 0 &&
-            strcmp(p_file->d_name, "..") != 0) {
+            strcmp(p_file->d_name, "..") != 0)
+        {
             //std::string cur_file_name(p_dir_name);
             //cur_file_name += "/";
             //cur_file_name += p_file->d_name;
@@ -48,5 +56,4 @@ static inline int read_files_in_dir(const char *p_dir_name, std::vector<std::str
     return 0;
 }
 
-#endif  // TRTX_YOLOV5_UTILS_H_
-
+#endif // TRTX_YOLOV5_UTILS_H_
