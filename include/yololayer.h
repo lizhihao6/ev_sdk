@@ -1,5 +1,6 @@
 #ifndef _YOLO_LAYER_H
 #define _YOLO_LAYER_H
+#define USE_FP16 // set USE_INT8 or USE_FP16 or USE_FP32
 
 #include <vector>
 #include <string>
@@ -17,9 +18,13 @@ namespace Yolo
         float anchors[CHECK_COUNT * 2];
     };
     static constexpr int MAX_OUTPUT_BBOX_COUNT = 1000;
-    static constexpr int CLASS_NUM = 80;
-    static constexpr int INPUT_H = 640; // yolov5's input height and width must be divisible by 32.
-    static constexpr int INPUT_W = 640;
+    static constexpr int CLASS_NUM = 3;
+    static constexpr int INPUT_H = 608; // yolov5's input height and width must be divisible by 32.
+    static constexpr int INPUT_W = 608;
+    static constexpr int BATCH_SIZE = 1;
+    static constexpr int DEVICE = 1;
+    static constexpr float NMS_THRESH = 0.4;
+    static constexpr char YOLO_MODEL_SIZE = 's';
 
     static constexpr int LOCATIONS = 4;
     struct alignas(float) Detection

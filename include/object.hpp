@@ -5,7 +5,7 @@
 typedef struct
 {
     float prob;
-    string name;
+    std::string name;
     cv::Rect rect;
 } Object;
 #endif //JI_OBJECT_HPP

@@ -10,17 +10,17 @@ typedef struct node
     struct node *next;
     struct node *prev;
 } node;
-typedef struct list
+typedef struct _list
 {
     int size;
     node *front;
     node *back;
-} list;
-list *make_list();
-int list_find(list *l, void *val);
-void list_insert(list *, void *);
-void free_list_contents(list *l);
-list *get_paths(char *filename);
-char **get_labels(char *filename);
+} _list;
+_list *make__list();
+int list_find(_list *l, void *val);
+void list_insert(_list *, void *);
+void free_list_contents(_list *l);
+_list *get_paths(const char *filename);
+char **get_labels(const char *filename);
 char *fgetl(FILE *fp);
 #endif

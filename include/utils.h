@@ -4,7 +4,7 @@
 #include <dirent.h>
 #include <opencv2/opencv.hpp>
 
-static inline cv::Mat preprocess_img(cv::Mat &img, int input_w, int input_h)
+static inline cv::Mat preprocess_img(const cv::Mat &img, int input_w, int input_h)
 {
     int w, h, x, y;
     float r_w = input_w / (img.cols * 1.0);

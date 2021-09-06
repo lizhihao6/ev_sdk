@@ -5,7 +5,7 @@
 #ifndef JI_SAMPLEDETECTOR_HPP
 #define JI_SAMPLEDETECTOR_HPP
 #include <string>
-#include "Object.hpp"
+#include "object.hpp"
 #include <opencv2/core/mat.hpp>
 #include "yolov5.hpp"
 #include "ji_utils.h"
@@ -45,7 +45,7 @@ public:
 private:
     // network* mNetworkPtr{nullptr};
     YOLOV5 *yolov5 = nullptr;
-    const string yolov5Path = "/usr/local/ev_sdk/model/yolov5s.wrt";
+    const string yolov5Path = "/usr/local/ev_sdk/model/yolov5s.wts";
     char *classNamePath = "/usr/local/ev_sdk/config/coco.names";
 
     double mThresh = 0.5;
