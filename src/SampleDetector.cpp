@@ -19,10 +19,10 @@ int SampleDetector::init()
 {
     LOG(INFO) << "Loading model...";
 
-    yolov5 = new YOLOV5();
-    if (yolov5->init(yolov5Path, classNamePath, mThresh))
+    yolov5 = new YOLOV5(mThresh);
+    if (yolov5->init(yolov5Path, classNamePath))
     {
-        LOG(ERROR) << "Failed loading weights from `" << yoloxPath << "`!";
+        LOG(ERROR) << "Failed loading weights from `" << yolov5Path << "`!";
         return SampleDetector::ERROR_INVALID_YOLOX_PATH;
     }
 
@@ -46,7 +46,7 @@ STATUS SampleDetector::processImage(const cv::Mat &cv_image, vector<Object> &res
         LOG(ERROR) << "Invalid input!";
         return ERROR_INVALID_INPUT;
     }
-    yolov5->forward(result);
+    yolov5->forward(cv_image, result);
     return SampleDetector::PROCESS_OK;
 }
 

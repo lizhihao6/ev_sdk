@@ -3,7 +3,10 @@ project(ji)
 
 add_definitions(-std=c++11)
 add_definitions(-DAPI_EXPORTS)
+add_definitions(-O2 -pthread)
 set(CMAKE_BUILD_TYPE Debug)
+SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb")  
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall") 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_INSTALL_PREFIX "/usr/local/ev_sdk")
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
@@ -34,16 +37,19 @@ link_directories(/usr/lib/x86_64-linux-gnu)
 include_directories(/usr/include/x86_64-linux-gnu)
 # link_directories(/usr/local/cuda-10.2/TensorRT/v7.2.1.6/lib) (same as cudnn)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Ofast -Wfatal-errors -D_MWAITXINTRIN_H_INCLUDED -fext-numeric-literals")
+
 # add cuda yolov5 cu
 cuda_add_library(myplugins SHARED ${CMAKE_CURRENT_SOURCE_DIR}/include/yololayer.cu)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Ofast -Wfatal-errors -D_MWAITXINTRIN_H_INCLUDED")
+target_link_libraries(myplugins nvinfer cudart)
 
 # 编译libji.so
 list(APPEND libji_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ji.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/common.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/SampleDetector.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/yolov5.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/yolov5_utils.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/calibrator.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/list.c)
 add_library (${PROJECT_NAME} SHARED ${libji_SOURCES})
@@ -68,7 +74,7 @@ target_link_libraries(${PROJECT_NAME}
 # 安装SampleDetector所依赖的libdarknet.so, 请在此处将自己依赖的库安装到/usr/local/ev_sdk/lib下
 # install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/3rd/darknet/lib/libdarknet.so DESTINATION lib)
 install(FILES DESTINATION lib)
-
+install(FILES  ${CMAKE_CURRENT_SOURCE_DIR}/build/libmyplugins.so DESTINATION  lib)
 
 
 # 以下是EV_SDK所依赖和需要测试接口的程序&库，请勿修改！！！

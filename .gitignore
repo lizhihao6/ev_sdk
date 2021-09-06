@@ -2,3 +2,6 @@ build/
 .idea
 .DS_Store
 core.*
+config/coco.names
+config/algo_config.json
+include/Configuration.hpp

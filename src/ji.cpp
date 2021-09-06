@@ -17,7 +17,7 @@
 #include <ji_utils.h>
 #include "ji.h"
 
-#include "Object.hpp"
+#include "object.hpp"
 #include "pubKey.hpp"
 #include "model_str.hpp"
 #include "SampleDetector.hpp"
@@ -136,14 +136,10 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
         {
             std::stringstream ss;
             auto objName = config.targetRectTextMap_0[config.language];
-            if (object.name == "grey_brick")
+            if (object.name == "mud")
                 objName = config.targetRectTextMap_1[config.language];
-            else if (object.name == "bricks")
-                objName = config.targetRectTextMap_2[config.language];
-            else if (object.name == "mound")
-                objName = config.targetRectTextMap_3[config.language];
             else
-                objName = config.targetRectTextMap_4[config.language];
+                objName = config.targetRectTextMap_2[config.language];
 
             ss << objName;
             if (config.drawConfidence)
