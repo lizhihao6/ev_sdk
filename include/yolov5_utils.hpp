@@ -6,15 +6,21 @@
 #include <iostream>
 #include "NvInfer.h"
 #include "logging.h"
+#include "common.hpp"
+
+
 extern "C"
 {
 #include "list.h"
 }
 
 using namespace std;
+using namespace Yolo;
 using namespace nvinfer1;
 
 static Logger gLogger;
+static const int OUTPUT_SIZE = MAX_OUTPUT_BBOX_COUNT * sizeof(Detection) / sizeof(float) + 1; // we assume the yololayer outputs no more than MAX_OUTPUT_BBOX_COUNT boxes that conf >= 0.1
+
 static int get_width(int x, float gw);
 static int get_depth(int x, float gd);
 int init_labels(char **mLabels, size_t &mClasses, const string classNamePath);
