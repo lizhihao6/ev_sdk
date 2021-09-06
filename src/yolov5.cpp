@@ -112,7 +112,7 @@ void YOLOV5::loadEngine(string engine_file_path)
     file.seekg(0, file.end);
     size = file.tellg();
     file.seekg(0, file.beg);
-    char* trtModelStream = new char[size];
+    char *trtModelStream = new char[size];
     assert(trtModelStream);
     file.read(trtModelStream, size);
     file.close();

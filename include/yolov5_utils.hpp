@@ -8,7 +8,6 @@
 #include "logging.h"
 #include "common.hpp"
 
-
 extern "C"
 {
 #include "list.h"

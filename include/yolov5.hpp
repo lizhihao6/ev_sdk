@@ -14,12 +14,9 @@
 #include "yolov5_utils.hpp"
 #include "common.hpp"
 
-
 using namespace std;
 using namespace Yolo;
 using namespace nvinfer1;
-
-static const int OUTPUT_SIZE = MAX_OUTPUT_BBOX_COUNT * sizeof(Detection) / sizeof(float) + 1; // we assume the yololayer outputs no more than MAX_OUTPUT_BBOX_COUNT boxes that conf >= 0.1
 
 void APIToModel(unsigned int maxBatchSize, IHostMemory **modelStream, float &gd, float &gw, const string &wts_name);
 bool replace(string &str, const string &from, const string &to);
