@@ -135,14 +135,10 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
         {
             std::stringstream ss;
             auto objName = config.targetRectTextMap_0[config.language];
-            if (object.name == "grey_brick")
-                objName = config.targetRectTextMap_1[config.language];
-            else if (object.name == "bricks")
-                objName = config.targetRectTextMap_2[config.language];
-            else if (object.name == "mound")
-                objName = config.targetRectTextMap_3[config.language];
+            if (object.name == "garbage")
+                objName = config.targetRectTextMap_0[config.language];
             else
-                objName = config.targetRectTextMap_4[config.language];
+                objName = config.targetRectTextMap_1[config.language];
 
             ss << objName;
             if (config.drawConfidence)
@@ -179,7 +175,7 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
     cJSON *objects = cJSON_CreateArray();
     cJSON_AddItemToObject(model_data, "objects", objects);
 
-    for (auto &object : detectedObjects)
+    for (auto &object : validTargets)
     {
         cJSON *odbObj = cJSON_CreateObject();
         cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(object.rect.x));
@@ -192,8 +188,8 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
         cJSON *_odbObj = cJSON_CreateObject();
         cJSON_AddItemToObject(_odbObj, "x", cJSON_CreateNumber(object.rect.x));
         cJSON_AddItemToObject(_odbObj, "y", cJSON_CreateNumber(object.rect.y));
-        cJSON_AddItemToObject(_odbObj, "width", cJSON_CreateNumber(object.rect.width));
         cJSON_AddItemToObject(_odbObj, "height", cJSON_CreateNumber(object.rect.height));
+        cJSON_AddItemToObject(_odbObj, "width", cJSON_CreateNumber(object.rect.width));
         cJSON_AddItemToObject(_odbObj, "confidence", cJSON_CreateNumber(object.prob));
         cJSON_AddItemToObject(_odbObj, "name", cJSON_CreateString(object.name.c_str()));
 
