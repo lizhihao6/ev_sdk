@@ -45,6 +45,11 @@ struct Configuration
     std::map<std::string, std::string> targetRectTextMap = { // 检测目标框顶部文字
         {"en", "dog"},
         {"zh", "狗"}};
+    std::map<std::string, std::string> targetRectTextMap_0 = { {"en", "red_brick"}, {"zh", "red_brick"} }; 
+    std::map<std::string, std::string> targetRectTextMap_1 = { {"en", "grey_brick"}, {"zh", "grey_brick"} }; 
+    std::map<std::string, std::string> targetRectTextMap_2 = { {"en", "bricks"}, {"zh", "bricks"} }; 
+    std::map<std::string, std::string> targetRectTextMap_3 = { {"en", "mound"}, {"zh", "mound"} }; 
+    std::map<std::string, std::string> targetRectTextMap_4 = { {"en", "snakeskin_bag"}, {"zh", "snakeskin_bag"} }; 
     COLOR_BGRA_TYPE targetRectColor = {0, 255, 0, 1.0f}; // 检测框`mark`的颜色
     COLOR_BGRA_TYPE textFgColor = {0, 0, 0, 0};          // 检测框顶部文字的颜色
     COLOR_BGRA_TYPE textBgColor = {255, 255, 255, 0};    // 检测框顶部文字的背景颜色

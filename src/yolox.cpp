@@ -62,7 +62,7 @@ std::vector<YOLOXObject> YOLOX::forward(const cv::Mat &img)
 
     std::vector<YOLOXObject> objects;
     decode_outputs(prob, objects, scale, img_w, img_h);
-    delete prob;
+    delete blob;
     return objects;
 }
 

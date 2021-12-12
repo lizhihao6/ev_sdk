@@ -21,15 +21,15 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:/usr/local/ev_sdk/lib")
 option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 find_package(CUDA REQUIRED)
 # cuda
-include_directories(/usr/local/cuda-10.2/include)
-link_directories(/usr/local/cuda-10.2/lib64)
+include_directories(/usr/local/cuda-11.1/include)
+link_directories(/usr/local/cuda-11.1/lib64)
 # cudnn
 include_directories(/usr/include)
 link_directories(/usr/lib/x86_64-linux-gnu)
 
 # tensorrt 
 include_directories(/usr/include/x86_64-linux-gnu)
-# link_directories(/usr/local/cuda-10.2/TensorRT/v7.2.1.6/lib) (same as cudnn)
+# link_directories(/usr/local/cuda-11.1/TensorRT/v7.2.1.6/lib) (same as cudnn)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Ofast -Wfatal-errors -D_MWAITXINTRIN_H_INCLUDED")
 
