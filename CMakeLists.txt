@@ -21,8 +21,8 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}:/usr/local/ev_sdk/lib")
 option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 find_package(CUDA REQUIRED)
 # cuda
-include_directories(/usr/local/cuda-10.2/include)
-link_directories(/usr/local/cuda-10.2/lib64)
+include_directories(/usr/local/cuda-11.1/include)
+link_directories(/usr/local/cuda-11.1/lib64)
 # cudnn
 include_directories(/usr/include)
 link_directories(/usr/lib/x86_64-linux-gnu)

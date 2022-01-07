@@ -29,7 +29,7 @@
 // 如果需要添加授权功能，请保留该宏定义，并在ji_init中实现授权校验
 #define ENABLE_JI_AUTHORIZATION
 // 如果需要加密模型，请保留该宏定义，并在ji_create_predictor中实现模型解密
-#define ENABLE_JI_MODEL_ENCRYPTION
+// #define ENABLE_JI_MODEL_ENCRYPTION
 
 #ifndef EV_SDK_DEBUG
 #define EV_SDK_DEBUG 1
@@ -51,10 +51,14 @@ Configuration config;
  */
 int processMat(SampleDetector *detector, std::vector<cv::Mat> &inMatArray, const char* args, cv::Mat &outFrame, JI_EVENT &event) {
     // 处理输入图像
+    if (inMatArray.size() != 2) {
+        return JISDK_RET_FAILED;
+    }
 
-    cv::Mat inFrame = inMatArray[0];
+    cv::Mat refFrame = inMatArray[0];
+    cv::Mat inFrame = inMatArray[1];
 
-    if (inFrame.empty()) {
+    if (refFrame.empty() || inFrame.empty()) {
         return JISDK_RET_FAILED;
     }
 
@@ -90,7 +94,7 @@ int processMat(SampleDetector *detector, std::vector<cv::Mat> &inMatArray, const
     std::vector<SampleDetector::Object> validTargets;
 
     // 算法处理
-    int processRet = detector->processImage(inFrame, detectedObjects);
+    int processRet = detector->processDiff(refFrame, inFrame, detectedObjects);
     if (processRet != SampleDetector::PROCESS_OK) {
         return JISDK_RET_FAILED;
     }
@@ -122,13 +126,13 @@ int processMat(SampleDetector *detector, std::vector<cv::Mat> &inMatArray, const
         isNeedAlert = true;
     }
     for (auto &object : validTargets) {
-        LOG(INFO) << "Found " << object.name;
+        // LOG(INFO) << "Found " << object.name;
         if (config.drawResult) {
             std::stringstream ss;
-            ss << config.targetRectTextMap[config.language];
+            ss << config.targetRectTextMap_0[config.language];
             if (config.drawConfidence) {
                 ss.precision(2);
-                ss << std::fixed << (config.targetRectTextMap[config.language].empty() ? "" : ": ") << object.prob * 100 << "%";
+                ss << std::fixed << (config.targetRectTextMap_0[config.language].empty() ? "" : ": ") << object.prob * 100 << "%";
             }
             drawRectAndText(outFrame, object.rect, ss.str(), config.targetRectLineThickness, cv::LINE_AA,
                             cv::Scalar(config.targetRectColor[0], config.targetRectColor[1], config.targetRectColor[2]), config.targetRectColor[3], config.targetTextHeight,
@@ -145,27 +149,40 @@ int processMat(SampleDetector *detector, std::vector<cv::Mat> &inMatArray, const
 
     // 将结果封装成json字符串
     cJSON *rootObj = cJSON_CreateObject();
-    int jsonAlertCode = JSON_ALERT_FLAG_FALSE;
-    if (isNeedAlert) {
-        jsonAlertCode = JSON_ALERT_FLAG_TRUE;
-    }
-    cJSON_AddItemToObject(rootObj, JSON_ALERT_FLAG_KEY, cJSON_CreateNumber(jsonAlertCode));
-    cJSON *dogsObj = cJSON_CreateArray();
-    for (auto &dog : validTargets) {
-        cJSON *odbObj = cJSON_CreateObject();
-        int x = dog.rect.x;
-        int y = dog.rect.y;
-        int width = dog.rect.width;
-        int height = dog.rect.height;
-        cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(x));
-        cJSON_AddItemToObject(odbObj, "y", cJSON_CreateNumber(y));
-        cJSON_AddItemToObject(odbObj, "width", cJSON_CreateNumber(width));
-        cJSON_AddItemToObject(odbObj, "height", cJSON_CreateNumber(height));
-        cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(dog.prob));
+    cJSON *algorithm_data = cJSON_CreateObject();
+    cJSON *model_data = cJSON_CreateObject();
+    cJSON_AddItemToObject(rootObj, "algorithm_data", algorithm_data);
+    cJSON_AddItemToObject(rootObj, "model_data", model_data);
 
-        cJSON_AddItemToArray(dogsObj, odbObj);
+    cJSON_AddItemToObject(algorithm_data, "is_alert", cJSON_CreateBool(isNeedAlert));
+    cJSON_AddItemToObject(algorithm_data, "target_count", cJSON_CreateNumber(validTargets.size()));
+    cJSON *target_info = cJSON_CreateArray();
+    cJSON_AddItemToObject(algorithm_data, "target_info", target_info);
+
+    cJSON *objects = cJSON_CreateArray();
+    cJSON_AddItemToObject(model_data, "objects", objects);
+
+    for (auto &object : validTargets)
+    {
+        cJSON *odbObj = cJSON_CreateObject();
+        cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(object.rect.x));
+        cJSON_AddItemToObject(odbObj, "y", cJSON_CreateNumber(object.rect.y));
+        cJSON_AddItemToObject(odbObj, "height", cJSON_CreateNumber(object.rect.height));
+        cJSON_AddItemToObject(odbObj, "width", cJSON_CreateNumber(object.rect.width));
+        cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(object.prob));
+        cJSON_AddItemToObject(odbObj, "name", cJSON_CreateString(object.name.c_str()));
+
+        cJSON *_odbObj = cJSON_CreateObject();
+        cJSON_AddItemToObject(_odbObj, "x", cJSON_CreateNumber(object.rect.x));
+        cJSON_AddItemToObject(_odbObj, "y", cJSON_CreateNumber(object.rect.y));
+        cJSON_AddItemToObject(_odbObj, "height", cJSON_CreateNumber(object.rect.height));
+        cJSON_AddItemToObject(_odbObj, "width", cJSON_CreateNumber(object.rect.width));
+        cJSON_AddItemToObject(_odbObj, "confidence", cJSON_CreateNumber(object.prob));
+        cJSON_AddItemToObject(_odbObj, "name", cJSON_CreateString(object.name.c_str()));
+
+        cJSON_AddItemToArray(objects, odbObj);
+        cJSON_AddItemToArray(target_info, _odbObj);
     }
-    cJSON_AddItemToObject(rootObj, "dogs", dogsObj);
 
     char *jsonResultStr = cJSON_Print(rootObj);
     int jsonSize = strlen(jsonResultStr);
@@ -249,9 +266,7 @@ void *ji_create_predictor(int pdtype) {
     decryptedModelStr[len] = '\0';
 #endif
 
-    int iRet = detector->init("/usr/local/ev_sdk/config/coco.names",
-                              decryptedModelStr,
-                              "/usr/local/ev_sdk/model/model.dat");
+    int iRet = detector->init();
     if (decryptedModelStr != nullptr) {
         free(decryptedModelStr);
     }
