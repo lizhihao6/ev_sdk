@@ -1,1 +1,1 @@
-{"version":7,"reference":"16fefb4c5349cdf6aef2c132bb53456c5dffde00730225bf41b01630bc7784ed","disk_serial":"2052G0488711"}
+{"version":7,"reference":"d42cedae9bec88d0eaac6def25ec666e884bd6f84c45ad0d6801999bd3659526","uuid":"CD0DC9C7-1121-3B76-82A7-15E4C16DDD0E"}

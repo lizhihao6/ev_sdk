@@ -29,7 +29,7 @@
 #define BBOX_CONF_THRESH 0.3
 #define INPUT_W 640
 #define INPUT_H 640
-#define NUM_CLASSES 5
+#define NUM_CLASSES 1
 
 using namespace nvinfer1;
 
