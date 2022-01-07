@@ -29,13 +29,13 @@
 // 如果需要添加授权功能，请保留该宏定义，并在ji_init中实现授权校验
 #define ENABLE_JI_AUTHORIZATION
 // 如果需要加密模型，请保留该宏定义，并在ji_create_predictor中实现模型解密
-// #define ENABLE_JI_MODEL_ENCRYPTION
+#define ENABLE_JI_MODEL_ENCRYPTION
 
 #ifndef EV_SDK_DEBUG
 #define EV_SDK_DEBUG 1
 #endif
 
-cv::Mat outputFrame{0};     // 用于存储算法处理后的输出图像，根据ji.h的接口规范，接口实现需要负责释放该资源
+cv::Mat outputFrame{0};        // 用于存储算法处理后的输出图像，根据ji.h的接口规范，接口实现需要负责释放该资源
 char *jsonResult = nullptr; // 用于存储算法处理后输出到JI_EVENT的json字符串，根据ji.h的接口规范，接口实现需要负责释放该资源
 Configuration config;
 
@@ -49,34 +49,32 @@ Configuration config;
  * @param[out] event 以JI_EVENT封装的处理结果
  * @return 如果处理成功，返回JISDK_RET_SUCCEED
  */
-int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *args, cv::Mat &outFrame, JI_EVENT &event)
-{
+int processMat(SampleDetector *detector, std::vector<cv::Mat> &inMatArray, const char* args, cv::Mat &outFrame, JI_EVENT &event) {
     // 处理输入图像
-    if (inFrame.empty())
-    {
+
+    cv::Mat inFrame = inMatArray[0];
+
+    if (inFrame.empty()) {
         return JISDK_RET_FAILED;
     }
 
 #ifdef ENABLE_JI_AUTHORIZATION
     // 检查授权，统计QPS
     int ret = ji_check_expire();
-    if (ret != JISDK_RET_SUCCEED)
-    {
-        switch (ret)
-        {
-        case EV_OVERMAXQPS:
-            return JISDK_RET_OVERMAXQPS;
-            break;
-        case EV_OFFLINE:
-            return JISDK_RET_OFFLINE;
-            break;
-        default:
-            return JISDK_RET_UNAUTHORIZED;
+    if (ret != JISDK_RET_SUCCEED) {
+        switch (ret) {
+            case EV_OVERMAXQPS:
+                return JISDK_RET_OVERMAXQPS;
+                break;
+            case EV_OFFLINE:
+                return JISDK_RET_OFFLINE;
+                break;
+            default:
+                return JISDK_RET_UNAUTHORIZED;
         }
     }
 #endif
-    if (inFrame.cols != config.currentInFrameSize.width || inFrame.rows != config.currentInFrameSize.height)
-    {
+    if (inFrame.cols != config.currentInFrameSize.width || inFrame.rows != config.currentInFrameSize.height) {
         config.updateROIInfo(inFrame.cols, inFrame.rows);
     }
 
@@ -93,19 +91,15 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
 
     // 算法处理
     int processRet = detector->processImage(inFrame, detectedObjects);
-    if (processRet != SampleDetector::PROCESS_OK)
-    {
+    if (processRet != SampleDetector::PROCESS_OK) {
         return JISDK_RET_FAILED;
     }
-    for (auto &obj : detectedObjects)
-    {
-        for (auto &roiPolygon : config.currentROIOrigPolygons)
-        {
+    for (auto &obj : detectedObjects) {
+        for (auto &roiPolygon : config.currentROIOrigPolygons) {
             int mid_x = obj.rect.x + obj.rect.width / 2;
             int mid_y = obj.rect.y + obj.rect.height / 2;
             // 当检测的目标在ROI内的话，就视为有效目标
-            if (WKTParser::inPolygon(roiPolygon, cv::Point(mid_x, mid_y)))
-            {
+            if (WKTParser::inPolygon(roiPolygon, cv::Point(mid_x, mid_y))) {
                 validTargets.emplace_back(obj);
                 break;
             }
@@ -113,38 +107,28 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
     }
 
     // 此处示例业务逻辑：当算法检测到有`dog`时，就报警
-    bool isNeedAlert = false; // 是否需要报警
+    bool isNeedAlert = false;   // 是否需要报警
 
     // 创建输出图
     inFrame.copyTo(outFrame);
     // 画ROI区域
-    if (config.drawROIArea && !config.currentROIOrigPolygons.empty())
-    {
+    if (config.drawROIArea && !config.currentROIOrigPolygons.empty()) {
         drawPolygon(outFrame, config.currentROIOrigPolygons, cv::Scalar(config.roiColor[0], config.roiColor[1], config.roiColor[2]),
-                    config.roiColor[3], cv::LINE_AA, config.roiLineThickness, config.roiFill);
+                config.roiColor[3], cv::LINE_AA, config.roiLineThickness, config.roiFill);
     }
     // 判断是否要要报警并将检测到的目标画到输出图上
-    if (validTargets.size() > 0)
-    {
+    if (validTargets.size() > 0) {
+        // 如果检测到有`狗`就报警
         isNeedAlert = true;
     }
-    for (auto &object : validTargets)
-    {
+    for (auto &object : validTargets) {
         LOG(INFO) << "Found " << object.name;
-        if (config.drawResult)
-        {
+        if (config.drawResult) {
             std::stringstream ss;
-            auto objName = config.targetRectTextMap_0[config.language];
-            if (object.name == "garbage")
-                objName = config.targetRectTextMap_0[config.language];
-            else
-                objName = config.targetRectTextMap_1[config.language];
-
-            ss << objName;
-            if (config.drawConfidence)
-            {
+            ss << config.targetRectTextMap[config.language];
+            if (config.drawConfidence) {
                 ss.precision(2);
-                ss << std::fixed << (objName.empty() ? "" : ": ") << object.prob * 100 << "%";
+                ss << std::fixed << (config.targetRectTextMap[config.language].empty() ? "" : ": ") << object.prob * 100 << "%";
             }
             drawRectAndText(outFrame, object.rect, ss.str(), config.targetRectLineThickness, cv::LINE_AA,
                             cv::Scalar(config.targetRectColor[0], config.targetRectColor[1], config.targetRectColor[2]), config.targetRectColor[3], config.targetTextHeight,
@@ -153,8 +137,7 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
         }
     }
 
-    if (isNeedAlert && config.drawWarningText)
-    {
+    if (isNeedAlert && config.drawWarningText) {
         drawText(outFrame, config.warningTextMap[config.language], config.warningTextSize,
                  cv::Scalar(config.warningTextFg[0], config.warningTextFg[1], config.warningTextFg[2]),
                  cv::Scalar(config.warningTextBg[0], config.warningTextBg[1], config.warningTextBg[2]), config.warningTextLeftTop);
@@ -162,61 +145,42 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
 
     // 将结果封装成json字符串
     cJSON *rootObj = cJSON_CreateObject();
-    cJSON *algorithm_data = cJSON_CreateObject();
-    cJSON *model_data = cJSON_CreateObject();
-    cJSON_AddItemToObject(rootObj, "algorithm_data", algorithm_data);
-    cJSON_AddItemToObject(rootObj, "model_data", model_data);
-
-    cJSON_AddItemToObject(algorithm_data, "is_alert", cJSON_CreateBool(isNeedAlert));
-    cJSON_AddItemToObject(algorithm_data, "target_count", cJSON_CreateNumber(validTargets.size()));
-    cJSON *target_info = cJSON_CreateArray();
-    cJSON_AddItemToObject(algorithm_data, "target_info", target_info);
-
-    cJSON *objects = cJSON_CreateArray();
-    cJSON_AddItemToObject(model_data, "objects", objects);
-
-    for (auto &object : validTargets)
-    {
-        cJSON *odbObj = cJSON_CreateObject();
-        cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(object.rect.x));
-        cJSON_AddItemToObject(odbObj, "y", cJSON_CreateNumber(object.rect.y));
-        cJSON_AddItemToObject(odbObj, "height", cJSON_CreateNumber(object.rect.height));
-        cJSON_AddItemToObject(odbObj, "width", cJSON_CreateNumber(object.rect.width));
-        cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(object.prob));
-        cJSON_AddItemToObject(odbObj, "name", cJSON_CreateString(object.name.c_str()));
-
-        cJSON *_odbObj = cJSON_CreateObject();
-        cJSON_AddItemToObject(_odbObj, "x", cJSON_CreateNumber(object.rect.x));
-        cJSON_AddItemToObject(_odbObj, "y", cJSON_CreateNumber(object.rect.y));
-        cJSON_AddItemToObject(_odbObj, "height", cJSON_CreateNumber(object.rect.height));
-        cJSON_AddItemToObject(_odbObj, "width", cJSON_CreateNumber(object.rect.width));
-        cJSON_AddItemToObject(_odbObj, "confidence", cJSON_CreateNumber(object.prob));
-        cJSON_AddItemToObject(_odbObj, "name", cJSON_CreateString(object.name.c_str()));
-
-        cJSON_AddItemToArray(objects, odbObj);
-        cJSON_AddItemToArray(target_info, _odbObj);
+    int jsonAlertCode = JSON_ALERT_FLAG_FALSE;
+    if (isNeedAlert) {
+        jsonAlertCode = JSON_ALERT_FLAG_TRUE;
     }
+    cJSON_AddItemToObject(rootObj, JSON_ALERT_FLAG_KEY, cJSON_CreateNumber(jsonAlertCode));
+    cJSON *dogsObj = cJSON_CreateArray();
+    for (auto &dog : validTargets) {
+        cJSON *odbObj = cJSON_CreateObject();
+        int x = dog.rect.x;
+        int y = dog.rect.y;
+        int width = dog.rect.width;
+        int height = dog.rect.height;
+        cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(x));
+        cJSON_AddItemToObject(odbObj, "y", cJSON_CreateNumber(y));
+        cJSON_AddItemToObject(odbObj, "width", cJSON_CreateNumber(width));
+        cJSON_AddItemToObject(odbObj, "height", cJSON_CreateNumber(height));
+        cJSON_AddItemToObject(odbObj, "confidence", cJSON_CreateNumber(dog.prob));
+
+        cJSON_AddItemToArray(dogsObj, odbObj);
+    }
+    cJSON_AddItemToObject(rootObj, "dogs", dogsObj);
 
     char *jsonResultStr = cJSON_Print(rootObj);
     int jsonSize = strlen(jsonResultStr);
-    if (jsonResult == nullptr)
-    {
+    if (jsonResult == nullptr) {
         jsonResult = new char[jsonSize + 1];
-    }
-    else if (strlen(jsonResult) < jsonSize)
-    {
-        free(jsonResult); // 如果需要重新分配空间，需要释放资源
+    } else if (strlen(jsonResult) < jsonSize) {
+        free(jsonResult);   // 如果需要重新分配空间，需要释放资源
         jsonResult = new char[jsonSize + 1];
     }
     strcpy(jsonResult, jsonResultStr);
 
     // 注意：JI_EVENT.code需要根据需要填充，切勿弄反
-    if (isNeedAlert)
-    {
+    if (isNeedAlert) {
         event.code = JISDK_CODE_ALARM;
-    }
-    else
-    {
+    } else {
         event.code = JISDK_CODE_NORMAL;
     }
     event.json = jsonResult;
@@ -229,11 +193,10 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
     return JISDK_RET_SUCCEED;
 }
 
-void *ji_create_predictor(int pdtype)
-{
+
+void *ji_create_predictor(int pdtype) {
 #ifdef ENABLE_JI_AUTHORIZATION
-    if (ji_check_expire_only() != EV_SUCCESS)
-    {
+    if (ji_check_expire_only() != EV_SUCCESS) {
         return nullptr;
     }
 #endif
@@ -244,8 +207,7 @@ void *ji_create_predictor(int pdtype)
 
     ALGO_CONFIG_TYPE algoConfig{config.mAlgoConfigDefault.nms, config.mAlgoConfigDefault.thresh, config.mAlgoConfigDefault.hierThresh};
     std::ifstream confIfs(configFile);
-    if (confIfs.is_open())
-    {
+    if (confIfs.is_open()) {
         size_t len = getFileLen(confIfs);
         char *confStr = new char[len + 1];
         confIfs.read(confStr, len);
@@ -267,7 +229,7 @@ void *ji_create_predictor(int pdtype)
 
     // 获取解密后的字符串
     int fileLen = 0;
-    decryptedModelStr = (char *)FetchBuffer(h, fileLen);
+    decryptedModelStr = (char *) FetchBuffer(h, fileLen);
     char *tmp = new char[fileLen + 1];
     strncpy(tmp, decryptedModelStr, fileLen);
     tmp[fileLen] = '\0';
@@ -287,13 +249,13 @@ void *ji_create_predictor(int pdtype)
     decryptedModelStr[len] = '\0';
 #endif
 
-    int iRet = detector->init();
-    if (decryptedModelStr != nullptr)
-    {
+    int iRet = detector->init("/usr/local/ev_sdk/config/coco.names",
+                              decryptedModelStr,
+                              "/usr/local/ev_sdk/model/model.dat");
+    if (decryptedModelStr != nullptr) {
         free(decryptedModelStr);
     }
-    if (iRet != SampleDetector::INIT_OK)
-    {
+    if (iRet != SampleDetector::INIT_OK) {
         return nullptr;
     }
     LOG(INFO) << "SamplePredictor init OK.";
@@ -301,18 +263,15 @@ void *ji_create_predictor(int pdtype)
     return detector;
 }
 
-void ji_destroy_predictor(void *predictor)
-{
-    if (predictor == NULL)
-        return;
+void ji_destroy_predictor(void *predictor) {
+    if (predictor == NULL) return;
 
     auto *detector = reinterpret_cast<SampleDetector *>(predictor);
     detector->unInit();
     delete detector;
 }
 
-int ji_init(int argc, char **argv)
-{
+int ji_init(int argc, char **argv) {
     LOG(INFO) << "EV_SDK version:" << EV_SDK_VERSION;
     int authCode = JISDK_RET_SUCCEED;
 #ifdef ENABLE_JI_AUTHORIZATION
@@ -323,29 +282,24 @@ int ji_init(int argc, char **argv)
     free(license_version);
 
     // 检查license参数
-    if (argc < 6)
-    {
+    if (argc < 6) {
         return JISDK_RET_INVALIDPARAMS;
     }
 
-    if (argv[0] == NULL || argv[5] == NULL)
-    {
+    if (argv[0] == NULL || argv[5] == NULL) {
         return JISDK_RET_INVALIDPARAMS;
     }
 
     int qps = 0;
-    if (argv[4])
-        qps = atoi(argv[4]);
+    if (argv[4]) qps = atoi(argv[4]);
 
     // 使用公钥校验授权信息
     int ret = ji_check_license(pubKey, argv[0], argv[1], argv[2], argv[3], qps > 0 ? &qps : NULL, atoi(argv[5]));
-    if (ret != EV_SUCCESS)
-    {
+    if (ret != EV_SUCCESS) {
         authCode = JISDK_RET_UNAUTHORIZED;
     }
 #endif
-    if (authCode != JISDK_RET_SUCCEED)
-    {
+    if (authCode != JISDK_RET_SUCCEED) {
         LOG(ERROR) << "ji_check_license failed!";
         return authCode;
     }
@@ -353,38 +307,35 @@ int ji_init(int argc, char **argv)
     return authCode;
 }
 
-void ji_reinit()
-{
+void ji_reinit() {
 #ifdef ENABLE_JI_AUTHORIZATION
     ji_check_license(NULL, NULL, NULL, NULL, NULL, NULL, 0);
 #endif
-    if (jsonResult)
-    {
+    if (jsonResult) {
         free(jsonResult);
         jsonResult = nullptr;
     }
 }
 
 int ji_calc_frame(void *predictor, const JI_CV_FRAME *inFrame, const char *args,
-                  JI_CV_FRAME *outFrame, JI_EVENT *event)
-{
-    if (predictor == NULL || inFrame == NULL)
-    {
+                  JI_CV_FRAME *outFrame, JI_EVENT *event) {
+    if (predictor == NULL || inFrame == NULL) {
         return JISDK_RET_INVALIDPARAMS;
     }
 
     auto *detector = reinterpret_cast<SampleDetector *>(predictor);
     cv::Mat inMat(inFrame->rows, inFrame->cols, inFrame->type, inFrame->data, inFrame->step);
-    if (inMat.empty())
-    {
+    if (inMat.empty()) {
         return JISDK_RET_FAILED;
     }
-    int processRet = processMat(detector, inMat, args, outputFrame, *event);
 
-    if (processRet == JISDK_RET_SUCCEED)
-    {
-        if ((event->code != JISDK_CODE_FAILED) && (!outputFrame.empty()) && (outFrame))
-        {
+    std::vector<cv::Mat> inMatArray;
+    inMatArray.push_back(inMat);
+
+    int processRet = processMat(detector, inMatArray, args, outputFrame, *event);
+
+    if (processRet == JISDK_RET_SUCCEED) {
+        if ((event->code != JISDK_CODE_FAILED) && (!outputFrame.empty()) && (outFrame)) {
             outFrame->rows = outputFrame.rows;
             outFrame->cols = outputFrame.cols;
             outFrame->type = outputFrame.type();
@@ -395,57 +346,76 @@ int ji_calc_frame(void *predictor, const JI_CV_FRAME *inFrame, const char *args,
     return processRet;
 }
 
-int ji_calc_buffer(void *predictor, const void *buffer, int length, const char *args, const char *outFile,
-                   JI_EVENT *event)
+typedef struct 
 {
-    if (predictor == NULL || buffer == NULL || length <= 0)
-    {
+    const void *buffer;
+    int length;
+} JI_BUFFER_INFO;
+
+//图片汇总信息
+typedef struct 
+{
+    int nums;
+    JI_BUFFER_INFO buffers[0];
+} JI_BUFFER_HEADER;
+
+int ji_calc_buffer(void *predictor, const void *buffer, int length, const char *args, const char *outFile,
+                   JI_EVENT *event) {
+    if (predictor == NULL || buffer == NULL) {
         return JISDK_RET_INVALIDPARAMS;
     }
 
     auto *classifierPtr = reinterpret_cast<SampleDetector *>(predictor);
 
-    const unsigned char *b = (const unsigned char *)buffer;
-    std::vector<unsigned char> vecBuffer(b, b + length);
-    cv::Mat inMat = cv::imdecode(vecBuffer, cv::IMREAD_COLOR);
-    if (inMat.empty())
+    std::vector<cv::Mat> inMatArray;
+
+    JI_BUFFER_HEADER *bufferHeader = (JI_BUFFER_HEADER*)buffer;
+    JI_BUFFER_INFO *bufferInfo = (JI_BUFFER_INFO*)bufferHeader->buffers;
+    for(int i = 0 ; i < bufferHeader->nums; i++)
+    {
+        const unsigned char *b = (const unsigned char *)bufferHeader->buffers[i].buffer;
+        std::vector<unsigned char> vecBuffer(b, b + bufferHeader->buffers[i].length);
+        cv::Mat inMat = cv::imdecode(vecBuffer, cv::IMREAD_COLOR);
+        if (inMat.empty()) {
+            continue;
+        }
+        inMatArray.push_back(inMat);
+    }
+
+    if(inMatArray.empty())
     {
         return JISDK_RET_FAILED;
     }
 
     cv::Mat outMat;
-    int processRet = processMat(classifierPtr, inMat, args, outMat, *event);
+    int processRet = processMat(classifierPtr, inMatArray, args, outMat, *event);
 
-    if (processRet == JISDK_RET_SUCCEED)
-    {
-        if ((event->code != JISDK_CODE_FAILED) && (!outMat.empty()) && (outFile))
-        {
-            cv::imwrite(outFile, outMat);
+    if (processRet == JISDK_RET_SUCCEED) {
+        if ((event->code != JISDK_CODE_FAILED) && (!outMat.empty()) && (outFile)) {
+            cv::imwrite(outFile,outMat);
         }
     }
     return processRet;
 }
 
-int ji_calc_file(void *predictor, const char *inFile, const char *args, const char *outFile, JI_EVENT *event)
-{
-    if (predictor == NULL || inFile == NULL)
-    {
+int ji_calc_file(void *predictor, const char *inFile, const char *args, const char *outFile, JI_EVENT *event) {
+    if (predictor == NULL || inFile == NULL) {
         return JISDK_RET_INVALIDPARAMS;
     }
 
     auto *classifierPtr = reinterpret_cast<SampleDetector *>(predictor);
     cv::Mat inMat = cv::imread(inFile);
-    if (inMat.empty())
-    {
+    if (inMat.empty()) {
         return JISDK_RET_FAILED;
     }
 
+    std::vector<cv::Mat> inMatArray;
+    inMatArray.push_back(inMat);
+
     cv::Mat outMat;
-    int processRet = processMat(classifierPtr, inMat, args, outMat, *event);
-    if (processRet == JISDK_RET_SUCCEED)
-    {
-        if ((event->code != JISDK_CODE_FAILED) && (!outMat.empty()) && (outFile))
-        {
+    int processRet = processMat(classifierPtr, inMatArray, args, outMat, *event);
+    if (processRet == JISDK_RET_SUCCEED) {
+        if ((event->code != JISDK_CODE_FAILED) && (!outMat.empty()) && (outFile)) {
             cv::imwrite(outFile, outMat);
         }
     }
@@ -453,19 +423,16 @@ int ji_calc_file(void *predictor, const char *inFile, const char *args, const ch
     return processRet;
 }
 
-int ji_calc_video_file(void *predictor, const char *infile, const char *args,
-                       const char *outfile, const char *jsonfile)
-{
+int ji_calc_video_file(void *predictor, const char *infile, const char* args,
+                       const char *outfile, const char *jsonfile) {
     // 没有实现的接口必须返回`JISDK_RET_UNUSED`
-    if (predictor == NULL || infile == NULL)
-    {
+    if (predictor == NULL || infile == NULL) {
         return JISDK_RET_INVALIDPARAMS;
     }
     auto *classifierPtr = reinterpret_cast<SampleDetector *>(predictor);
 
     cv::VideoCapture videoCapture(infile);
-    if (!videoCapture.isOpened())
-    {
+    if (!videoCapture.isOpened()) {
         return JISDK_RET_FAILED;
     }
 
@@ -479,77 +446,64 @@ int ji_calc_video_file(void *predictor, const char *infile, const char *args,
     cJSON *jsonRoot, *jsonDetail;
     jsonRoot = jsonDetail = NULL;
 
-    while (videoCapture.read(inMat))
-    {
+    while (videoCapture.read(inMat)) {
         timestamp = videoCapture.get(cv::CAP_PROP_POS_MSEC);
 
-        iRet = processMat(classifierPtr, inMat, args, outMat, event);
+        std::vector<cv::Mat> inMatArray;
+        inMatArray.push_back(inMat);
 
-        if (iRet == JISDK_RET_SUCCEED)
-        {
+        iRet = processMat(classifierPtr, inMatArray, args, outMat, event);
+
+        if (iRet == JISDK_RET_SUCCEED) {
             ++totalFrames;
 
-            if (event.code != JISDK_CODE_FAILED)
-            {
-                if (event.code == JISDK_CODE_ALARM)
-                {
+            if (event.code != JISDK_CODE_FAILED) {
+                if (event.code == JISDK_CODE_ALARM) {
                     ++alertFrames;
                 }
 
-                if (!outMat.empty() && outfile)
-                {
-                    if (!vwriter.isOpened())
-                    {
+                if (!outMat.empty() && outfile) {
+                    if (!vwriter.isOpened()) {
                         vwriter.open(outfile,
-                                     /*videoCapture.get(cv::CAP_PROP_FOURCC)*/ cv::VideoWriter::fourcc('X', '2', '6', '4'),
+                                /*videoCapture.get(cv::CAP_PROP_FOURCC)*/cv::VideoWriter::fourcc('X', '2', '6', '4'),
                                      videoCapture.get(cv::CAP_PROP_FPS), outMat.size());
-                        if (!vwriter.isOpened())
-                        {
+                        if (!vwriter.isOpened()) {
                             return JISDK_RET_FAILED;
                         }
                     }
                     vwriter.write(outMat);
                 }
 
-                if (event.json && jsonfile)
-                {
-                    if (jsonDetail == NULL)
-                    {
+                if (event.json && jsonfile) {
+                    if (jsonDetail == NULL) {
                         jsonDetail = cJSON_CreateArray();
                     }
 
                     cJSON *jsonFrame = cJSON_Parse(event.json);
-                    if (jsonFrame)
-                    {
+                    if (jsonFrame) {
                         cJSON_AddItemToObjectCS(jsonFrame, "timestamp", cJSON_CreateNumber(timestamp));
                         cJSON_AddItemToArray(jsonDetail, jsonFrame);
                     }
                 }
             }
-        }
-        else
-        {
+        } else {
             break;
         }
     }
 
-    if (iRet == JISDK_RET_SUCCEED)
-    {
-        if (jsonfile)
-        {
+    if (iRet == JISDK_RET_SUCCEED) {
+        if (jsonfile) {
             jsonRoot = cJSON_CreateObject();
             cJSON_AddItemToObjectCS(jsonRoot, "total_frames", cJSON_CreateNumber(totalFrames));
             cJSON_AddItemToObjectCS(jsonRoot, "alert_frames", cJSON_CreateNumber(alertFrames));
 
-            if (jsonDetail)
-            {
+            if (jsonDetail) {
                 cJSON_AddItemToObjectCS(jsonRoot, "detail", jsonDetail);
             }
 
             char *buff = cJSON_Print(jsonRoot);
             std::ofstream fs(jsonfile);
-            if (fs.is_open())
-            {
+            if (fs.is_open()) {
                 fs << buff;
                 fs.close();
             }
@@ -557,12 +511,9 @@ int ji_calc_video_file(void *predictor, const char *infile, const char *args,
         }
     }
 
-    if (jsonRoot)
-    {
+    if (jsonRoot) {
         cJSON_Delete(jsonRoot);
-    }
-    else if (jsonDetail)
-    {
+    } else if (jsonDetail) {
         cJSON_Delete(jsonDetail);
     }
 

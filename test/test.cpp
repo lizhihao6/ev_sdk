@@ -2,6 +2,8 @@
 
 #include <string>
 #include <fstream>
+#include <sys/types.h>
+#include <dirent.h>
 
 #include <opencv2/opencv.hpp>
 #include <glog/logging.h>
@@ -14,7 +16,20 @@ using namespace std;
 
 #define EMPTY_EQ_NULL(a)  ((a).empty())?NULL:(a).c_str()
 
-string strFunction,strLicense,strIn,strArgs,strOut;
+typedef struct 
+{
+    const void *buffer;
+    int length;
+} JI_BUFFER_INFO;
+
+//图片汇总信息
+typedef struct 
+{
+    int nums;
+    JI_BUFFER_INFO buffers[0];
+} JI_BUFFER_HEADER;
+
+string strFunction,strLicense,strIn,strArgs,strOut,strDir;
 int repeats  = 1;
 void *predictor = NULL;
 
@@ -150,6 +165,7 @@ void show_help()
               << "  -a  --args        for example roi\n"
               << "  -o  --outfile     result file\n"
               << "  -r  --repeat      number of repetitions. default: 1\n"
+              << "  -d  --directory   image directory \n"
               << "                    <= 0 represents an unlimited number of times\n"
               << "                    for example: -r 100\n"
               << "---------------------------------\n";
@@ -309,22 +325,66 @@ void test_for_ji_calc_frame()
     } //end_while
 }
 
-void test_for_ji_calc_buffer()
+
+void getAllFiles(string path, vector<string>& files)
 {
-    std::ifstream ifs(strIn.c_str(),std::ifstream::binary);
-    if (!ifs.is_open())
+    DIR *dir;
+    struct dirent *ptr;
+    if((dir=opendir(path.c_str()))==NULL)
     {
-        LOG(ERROR) << "[ERROR] open source file failed.";
+        LOG(ERROR) << "Open "<< path <<" error...";
         return;
     }
+    while((ptr=readdir(dir))!=NULL){
+        if(strcmp(ptr->d_name,".")==0||strcmp(ptr->d_name,"..")==0)
+            continue;
+        else if(ptr->d_type==8)//file
+            files.push_back(path+"/"+ptr->d_name);
+        else if(ptr->d_type==10)//link file
+            continue;
+        else if(ptr->d_type==4){
+            //files.push_back(ptr->d_name);//dir
+            //getAllFiles(path+"/"+ptr->d_name,files);
+            continue;
+        }
+    }
+    closedir(dir);
+}
 
-    std::filebuf *fbuff = ifs.rdbuf();
-    std::size_t size = fbuff->pubseekoff(0,ifs.end,ifs.in);
-    fbuff->pubseekpos(0,ifs.in);
+void test_for_ji_calc_buffer()
+{
+    std::vector<std::string> files;
+    getAllFiles(strDir,files);
 
-    char* buffer = new char[size+1];
-    fbuff->sgetn(buffer,size);
-    ifs.close();
+    const int pheader_size = sizeof(JI_BUFFER_HEADER)+sizeof(JI_BUFFER_HEADER)*files.size();
+    char pheader[pheader_size];
+    memset(pheader,0,pheader_size);
+    JI_BUFFER_HEADER *bufferHeader = (JI_BUFFER_HEADER*)pheader;
+
+    bufferHeader->nums = static_cast<int>(files.size());
+    LOG(INFO) << "file count:" << files.size();
+    for (unsigned int i = 0; i < files.size(); i++)
+    {
+        std::ifstream ifs(files[i].c_str(),std::ifstream::binary);
+        if (!ifs.is_open())
+        {
+            LOG(ERROR) << "[ERROR] open source file failed.";
+            return;
+        }
+
+        std::filebuf *fbuff = ifs.rdbuf();
+        std::size_t size = fbuff->pubseekoff(0,ifs.end,ifs.in);
+        fbuff->pubseekpos(0,ifs.in);
+
+        char* buffer = new char[size+1];
+        fbuff->sgetn(buffer,size);
+        ifs.close();
+
+        bufferHeader->buffers[i].buffer = buffer;
+        bufferHeader->buffers[i].length = size;
+        LOG(INFO) << "file " << i+1 << " size:" << size;
+    }
+
 
     JI_EVENT event;
     int iRet;
@@ -335,7 +395,7 @@ void test_for_ji_calc_buffer()
         if (repeats == -1 || repeats > 1)
             LOG(INFO) << "repeat: " << count;
 
-        iRet = ji_calc_buffer(predictor, buffer, size, EMPTY_EQ_NULL(strArgs),
+        iRet = ji_calc_buffer(predictor, bufferHeader, 0, EMPTY_EQ_NULL(strArgs),
                               EMPTY_EQ_NULL(strOut), &event);
         LOG(INFO) << "call ji_calc_buffer, return " << iRet;
 
@@ -347,7 +407,10 @@ void test_for_ji_calc_buffer()
         }
     } //end_while
 
-    delete [] buffer;
+    for(int i = 0; i < bufferHeader->nums; i++)
+    {
+        delete (char*)bufferHeader->buffers[i].buffer;
+    }
 }
 
 void test_for_ji_calc_file()
@@ -708,7 +771,7 @@ int main(int argc, char *argv[])
     free(license_version);
 
     //parse params
-    const char *short_options = "hf:l:i:a:o:r:";
+    const char *short_options = "hf:l:i:a:o:r:d:";
     const struct option long_options[] = {
             { "help",     0,   NULL,    'h'},
             { "function", 1,   NULL,    'f'},
@@ -717,6 +780,7 @@ int main(int argc, char *argv[])
             { "args",     1,   NULL,    'a'},
             { "outfile",  1,   NULL,    'o'},
             { "repeat",   1,   NULL,    'r'},
+            { "dir",      1,   NULL,    'd'},
             {      0,     0,      0,      0}
     };
 
@@ -757,6 +821,10 @@ int main(int argc, char *argv[])
             case 'r':
                 repeats = atoi(optarg);
                 break;
+            
+            case 'd':
+                strDir = optarg;
+                break;
 
             default:
                 break;
@@ -794,9 +862,16 @@ int main(int argc, char *argv[])
         strLicense = "license.txt";
     }
 
-    if (c !=4 && strIn.empty())
+    if ((c !=4 && c != 1) && strIn.empty())
     {
         LOG(ERROR) << "[ERROR] no infile.";
+        show_help();
+        return -1;
+    }
+
+    if(c == 1 && strDir.empty())
+    {
+        LOG(ERROR) << "[ERROR] no dir.";
         show_help();
         return -1;
     }
@@ -817,7 +892,8 @@ int main(int argc, char *argv[])
               << "\n\tinfile: "    << strIn
               << "\n\targs: "      << strArgs
               << "\n\toutfile: "   << strOut
-              << "\n\trepeat:"     << repeats;
+              << "\n\trepeat:"     << repeats
+              << "\n\tdir:"        << strDir;
 
     //read license & check license
     string l,u,a,t;
