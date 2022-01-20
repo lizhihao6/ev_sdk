@@ -65,8 +65,10 @@ private:
     double mNms = 0.6;
     size_t mClasses = 0;
 
-    const float diffThresh = 30.0f;
-    const int kernelSize = 30;
+    const float diffThresh = 8.0f;
+    const int openKernelSize = 8;
+    const int closeKernelSize = 20;
+    const int removeOpenKernelSize = 13;
 };
 
 #endif //JI_SAMPLEDETECTOR_HPP

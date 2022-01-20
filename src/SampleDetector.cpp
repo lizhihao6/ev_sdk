@@ -96,7 +96,11 @@ STATUS SampleDetector::processDiff(const cv::Mat &ref_image, const cv::Mat &cv_i
     cv::cvtColor(cv_image, gray, cv::COLOR_BGR2GRAY);
     cv::absdiff(ref_gray, gray, diffImage);
     threshold(diffImage, mask, diffThresh, 255, cv::THRESH_BINARY);
-    cv::Mat element = getStructuringElement(cv::MORPH_OPEN, cv::Size(kernelSize, kernelSize));
+    cv::Mat element = getStructuringElement(cv::MORPH_OPEN, cv::Size(openKernelSize, openKernelSize));
+    morphologyEx(mask, mask, cv::MORPH_OPEN, element);
+    element = getStructuringElement(cv::MORPH_OPEN, cv::Size(closeKernelSize, closeKernelSize));
+    morphologyEx(mask, mask, cv::MORPH_CLOSE, element);
+    element = getStructuringElement(cv::MORPH_OPEN, cv::Size(removeOpenKernelSize, removeOpenKernelSize));
     morphologyEx(mask, mask, cv::MORPH_OPEN, element);
     
     // calculate the bounding box
