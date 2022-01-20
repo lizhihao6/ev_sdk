@@ -15,13 +15,19 @@
     "object_text_color": [255, 255, 255, 0],
     "object_text_bg_color": [50, 50, 50, 0],
     "object_text_size": 30,
-    "mark_text_en": "un_hole",
-    "mark_text_zh": "未封堵的孔洞",
+    "mark_text_en": "do not use this",
+    "mark_text_zh": "别用这个",
     "draw_warning_text": true,
+    "mark_text_en_0": "hole" , 
+    "mark_text_zh_0": "孔洞" , 
+    "mark_text_en_1": "un_hole" , 
+    "mark_text_zh_1": "未封堵的孔洞" , 
     "warning_text_en": "WARNING! WARNING!",
     "warning_text_zh": "警告!",
     "warning_text_size": 30,
     "warning_text_color": [255, 255, 255, 0],
     "warning_text_bg_color": [0, 0, 200, 0],
-    "warning_text_left_top": [0, 0]
+    "warning_text_left_top": [0, 0],
+    
+    "alert_hole": false
 }

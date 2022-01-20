@@ -99,6 +99,10 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
     }
     for (auto &obj : detectedObjects)
     {
+        // compare 相等为 0
+        if (config.alertHole==0 && !obj.name.compare("hole")){
+            continue;
+        }
         for (auto &roiPolygon : config.currentROIOrigPolygons)
         {
             int mid_x = obj.rect.x + obj.rect.width / 2;
@@ -134,7 +138,11 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
         if (config.drawResult)
         {
             std::stringstream ss;
-            auto objName = config.targetRectTextMap[config.language];
+            auto objName = config.targetRectTextMap_0[config.language];
+            // compare 相等为 0
+            if (!object.name.compare("un_hole")){
+                objName = config.targetRectTextMap_1[config.language];
+            }
 
             ss << objName;
             if (config.drawConfidence)
@@ -171,7 +179,7 @@ int processMat(SampleDetector *detector, const cv::Mat &inFrame, const char *arg
     cJSON *objects = cJSON_CreateArray();
     cJSON_AddItemToObject(model_data, "objects", objects);
 
-    for (auto &object : detectedObjects)
+    for (auto &object : validTargets)
     {
         cJSON *odbObj = cJSON_CreateObject();
         cJSON_AddItemToObject(odbObj, "x", cJSON_CreateNumber(object.rect.x));

@@ -43,14 +43,17 @@ struct Configuration
     std::string language = "en";                             // 所显示文字的默认语言
     int targetRectLineThickness = 4;                         // 目标框粗细
     std::map<std::string, std::string> targetRectTextMap = { // 检测目标框顶部文字
-        {"en", "un_hole"},
-        {"zh", "未封堵的孔洞"}};
+        {"en", "no use this"},
+        {"zh", "别用这个"}};
+    std::map<std::string, std::string> targetRectTextMap_0 = { {"en", "hole"}, {"zh", "孔洞"} }; 
+    std::map<std::string, std::string> targetRectTextMap_1 = { {"en", "un_hole"}, {"zh", "未封堵的孔洞"} }; 
     COLOR_BGRA_TYPE targetRectColor = {0, 255, 0, 1.0f}; // 检测框`mark`的颜色
     COLOR_BGRA_TYPE textFgColor = {0, 0, 0, 0};          // 检测框顶部文字的颜色
     COLOR_BGRA_TYPE textBgColor = {255, 255, 255, 0};    // 检测框顶部文字的背景颜色
     int targetTextHeight = 30;                           // 目标框顶部字体大小
 
     bool drawWarningText = true;
+    bool alertHole = false;
     int warningTextSize = 40;                             // 画到图上的报警文字大小
     std::map<std::string, std::string> warningTextMap = { // 画到图上的报警文字
         {"en", "WARNING! WARNING!"},
@@ -175,6 +178,13 @@ struct Configuration
         if (drawWarningTextObj != nullptr && (drawWarningTextObj->type == cJSON_True || drawWarningTextObj->type == cJSON_False))
         {
             drawWarningText = drawWarningTextObj->valueint;
+        }
+
+
+        cJSON *drawAlertHoleObj = cJSON_GetObjectItem(confObj, "alert_hole");
+        if (drawAlertHoleObj != nullptr && (drawAlertHoleObj->type == cJSON_True || drawAlertHoleObj->type == cJSON_False))
+        {
+            alertHole = drawAlertHoleObj->valueint;
         }
 
         cJSON *warningTextSizeObj = cJSON_GetObjectItem(confObj, "warning_text_size");
