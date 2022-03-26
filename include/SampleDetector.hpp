@@ -40,7 +40,7 @@ public:
     STATUS init();
     void unInit();
     STATUS processImage(const cv::Mat &image, vector<Object> &detectResults);
-    STATUS processDiff(const cv::Mat &ref_image, const cv::Mat &cv_image, vector<Object> &result);
+    STATUS processDiff(const cv::Mat &ref_image, const cv::Mat &cv_image, vector<Object> &result, std::vector<std::vector<cv::Point>> &roi);
 
     bool setThresh(double thresh);
 
@@ -65,10 +65,9 @@ private:
     double mNms = 0.6;
     size_t mClasses = 0;
 
-    const float diffThresh = 8.0f;
-    const int openKernelSize = 8;
-    const int closeKernelSize = 20;
-    const int removeOpenKernelSize = 13;
+    const int gaussianBlurSize = 21;
+    const float minDiff = 8.0f;
+    const float maxDiff = 25.0f;
 };
 
 #endif //JI_SAMPLEDETECTOR_HPP

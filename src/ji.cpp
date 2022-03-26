@@ -94,7 +94,7 @@ int processMat(SampleDetector *detector, std::vector<cv::Mat> &inMatArray, const
     std::vector<SampleDetector::Object> validTargets;
 
     // 算法处理
-    int processRet = detector->processDiff(refFrame, inFrame, detectedObjects);
+    int processRet = detector->processDiff(refFrame, inFrame, detectedObjects, config.currentROIOrigPolygons);
     if (processRet != SampleDetector::PROCESS_OK) {
         return JISDK_RET_FAILED;
     }
